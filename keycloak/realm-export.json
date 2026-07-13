@@ -1,0 +1,255 @@
+{
+  "realm": "acme",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "eventsEnabled": true,
+  "eventsListeners": [
+    "jboss-logging"
+  ],
+  "adminEventsEnabled": true,
+  "adminEventsDetailsEnabled": true,
+  "clients": [
+    {
+      "clientId": "user-cleanup-service",
+      "name": "User Cleanup Service Account",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "cleanup-secret-change-me",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "authorizationServicesEnabled": false,
+      "attributes": {
+        "access.token.lifespan": "300"
+      }
+    },
+    {
+      "clientId": "acme-portal",
+      "name": "ACME Portal (example public client)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "http://localhost:3000/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3000"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "alice",
+      "enabled": true,
+      "email": "alice@acme.local",
+      "emailVerified": true,
+      "firstName": "Alice",
+      "lastName": "User",
+      "attributes": {
+        "lastLogin": [
+          "1766643226967"
+        ],
+        "note": [
+          "old \u2014 should be cleaned"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "bob",
+      "enabled": true,
+      "email": "bob@acme.local",
+      "emailVerified": true,
+      "firstName": "Bob",
+      "lastName": "User",
+      "attributes": {
+        "lastLogin": [
+          "1768371226967"
+        ],
+        "note": [
+          "old \u2014 should be cleaned"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "carol",
+      "enabled": true,
+      "email": "carol@acme.local",
+      "emailVerified": true,
+      "firstName": "Carol",
+      "lastName": "User",
+      "attributes": {
+        "lastLogin": [
+          "1770963226967"
+        ],
+        "note": [
+          "old \u2014 should be cleaned"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "dave",
+      "enabled": true,
+      "email": "dave@acme.local",
+      "emailVerified": true,
+      "firstName": "Dave",
+      "lastName": "User",
+      "attributes": {
+        "lastLogin": [
+          "1773468826967"
+        ],
+        "note": [
+          "just over threshold \u2014 should be cleaned at default 120"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "eve",
+      "enabled": true,
+      "email": "eve@acme.local",
+      "emailVerified": true,
+      "firstName": "Eve",
+      "lastName": "User",
+      "attributes": {
+        "lastLogin": [
+          "1773641626967"
+        ],
+        "note": [
+          "just under threshold \u2014 should NOT be cleaned at default 120"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "frank",
+      "enabled": true,
+      "email": "frank@acme.local",
+      "emailVerified": true,
+      "firstName": "Frank",
+      "lastName": "User",
+      "attributes": {
+        "lastLogin": [
+          "1776147226967"
+        ],
+        "note": [
+          "recent \u2014 safe"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "grace",
+      "enabled": true,
+      "email": "grace@acme.local",
+      "emailVerified": true,
+      "firstName": "Grace",
+      "lastName": "User",
+      "attributes": {
+        "lastLogin": [
+          "1781331226967"
+        ],
+        "note": [
+          "recent \u2014 safe"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "heidi",
+      "enabled": true,
+      "email": "heidi@acme.local",
+      "emailVerified": true,
+      "firstName": "Heidi",
+      "lastName": "User",
+      "attributes": {
+        "lastLogin": [
+          "1783491226967"
+        ],
+        "note": [
+          "very recent \u2014 safe"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "break-glass",
+      "enabled": true,
+      "email": "break-glass@acme.local",
+      "emailVerified": true,
+      "firstName": "Break-glass",
+      "lastName": "User",
+      "attributes": {
+        "lastLogin": [
+          "1749363226967"
+        ],
+        "note": [
+          "admin-flavored \u2014 should be EXCLUDED even though very old"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}
