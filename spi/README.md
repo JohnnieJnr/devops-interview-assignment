@@ -1,32 +1,34 @@
-# spi/
+# Keycloak Stale-User Cleanup SPI
 
-Placeholder for candidates who choose to implement this as a **Keycloak SPI (Service Provider Interface)** in Java rather than an external tool.
+This directory contains a native Keycloak SPI implementation for stale-user cleanup.
 
-## If you go this route
+## What is implemented
 
-Put your Maven or Gradle project here. Keycloak SPI is the native extension mechanism. Your code runs inside the Keycloak JVM and can hook into things like:
+- `com.example.keycloak.cleanup.CleanupSpi` — SPI registration class
+- `UserCleanupProviderFactory` — provider factory that schedules a Keycloak timer task
+- `UserCleanupScheduledTask` — cleanup logic that deletes users with stale `lastLogin` attributes
+- `META-INF/services/org.keycloak.provider.Spi` — service registration for Keycloak provider discovery
 
-- **Scheduled tasks** (`org.keycloak.timer.TimerSpi`)
-- **User event listeners** (`org.keycloak.events.EventListenerProvider`)
-- **User federation providers** (`org.keycloak.storage.UserStorageProvider`)
+## Build
 
-For the stale-user cleanup task, a **scheduled task provider** is the most direct fit. It lets you register a job that runs on a Keycloak-managed timer.
+From `spi/`:
 
-## Trade-offs to mention in your README
+```bash
+mvn package -DskipTests
+```
 
-| SPI wins | SPI costs |
-|---|---|
-| Runs in-process, no external HTTP round-trips | Java toolchain and build required |
-| No separate service account needed | Ships coupled to a Keycloak version. Upgrades can break SPIs |
-| Direct access to the Keycloak session and user model | Harder to test in isolation |
-| Deploys as a single JAR into `providers/` | No separate scaling story. Runs where Keycloak runs |
+The resulting JAR is `target/keycloak-user-cleanup-spi-0.1.0.jar`.
 
-## Docs pointer
+## Deployment
 
-Keycloak SPI reference: https://www.keycloak.org/docs/latest/server_development/#_providers
+Drop the built JAR into Keycloak's `providers/` directory and restart Keycloak.
 
-We haven't scaffolded a Maven project because most candidates go the external-tool route. If you pick SPI, set up your own project structure here.
+## Configuration
 
-## Not required
+The provider supports the following server configuration keys in `keycloak.conf` or `keycloak-server.json`:
 
-You can do this task without touching SPI. Consideration of SPI, even to reject it with reasoning, is what we look for. Actually building one is one valid path, not the required one.
+- `threshold-days` (default `120`)
+- `schedule-interval-minutes` (default `1440`)
+- `realm-name` (default `acme`)
+- `exclude-users` (default `break-glass`)
+- `dry-run` (default `false`)

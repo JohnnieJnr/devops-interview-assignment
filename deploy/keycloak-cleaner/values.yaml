@@ -1,0 +1,144 @@
+# Default values for keycloak-cleaner.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Keycloak configuration
+keycloak:
+  # URL of the Keycloak server (must be accessible from the cluster)
+  url: "http://keycloak.default.svc.cluster.local:8080"
+  # Realm to target for cleanup
+  realm: "acme"
+  # Client ID for the cleanup service account
+  clientId: "user-cleanup-service"
+  # Client secret reference - use an existing Secret or ExternalSecrets
+  # If using an existing secret:
+  #   - set clientSecretRef.name to the secret name
+  #   - set clientSecretRef.key to the secret key
+  # If using ExternalSecrets, configure externalSecrets below
+  clientSecretRef:
+    name: "keycloak-cleaner-secret"
+    key: "client-secret"
+
+# Cleanup configuration
+cleanup:
+  # Number of days of inactivity before marking a user as stale (default: 120)
+  inactivityDays: 120
+  # Whether to run in dry-run mode (log candidates but don't delete)
+  dryRun: false
+  # Comma-separated list of usernames to exclude from cleanup
+  exclusions: "admin,break-glass"
+
+# CronJob configuration
+cronjob:
+  # Schedule in cron format (runs daily at 2 AM UTC by default)
+  schedule: "0 2 * * *"
+  # Time zone for the schedule (optional, requires k8s 1.27+)
+  timeZone: "UTC"
+  # Concurrency policy: Allow, Forbid, Replace
+  concurrencyPolicy: "Forbid"
+  # Number of successful job history records to retain
+  successfulJobsHistoryLimit: 3
+  # Number of failed job history records to retain
+  failedJobsHistoryLimit: 3
+  # Suspend the cronjob (useful for pausing cleanups)
+  suspend: false
+
+# Pod configuration
+pod:
+  # Container image
+  image:
+    repository: "cleaner"
+    tag: "0.1.0"
+    pullPolicy: "IfNotPresent"
+  
+  # Image pull secrets for private registries
+  imagePullSecrets: []
+  
+  # Resource requests and limits
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "256Mi"
+  
+  # Container lifecycle hooks
+  lifecycle: {}
+  
+  # Node affinity constraints
+  affinity: {}
+  
+  # Pod tolerations for node taints
+  tolerations: []
+  
+  # Pod priority class name
+  priorityClassName: ""
+
+# Job configuration
+job:
+  # Restart policy for failed jobs
+  restartPolicy: "OnFailure"
+  # Backoff limit (number of retries before marking job as failed)
+  backoffLimit: 3
+  # Time in seconds for the job to complete
+  activeDeadlineSeconds: 600
+  # Time in seconds before the job is considered failed
+  ttlSecondsAfterFinished: 3600
+
+# ServiceAccount configuration
+serviceAccount:
+  # Create a service account for the cronjob
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # Name of the service account (auto-generated if not specified)
+  name: ""
+
+# RBAC configuration
+rbac:
+  # Create RBAC role and role binding
+  create: true
+
+# Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+# Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# Namespace where the cronjob will be deployed
+namespace: "default"
+
+# Labels to add to all resources
+labels:
+  app.kubernetes.io/name: keycloak-cleaner
+  app.kubernetes.io/version: "0.1.0"
+
+# Annotations to add to the cronjob
+annotations: {}
+
+# ExternalSecrets integration (optional)
+# Enable this if using ExternalSecrets to manage the client secret
+externalSecrets:
+  enabled: false
+  # Reference to an existing ExternalSecret
+  # externalSecretRef:
+  #   name: keycloak-cleaner-external-secret
+  #   namespace: external-secrets
+
+# Advanced: Multi-realm configuration
+# If you want to run the same cleanup across multiple realms,
+# define multiple configs here and create separate CronJobs
+# multiRealm:
+#   - realm: "acme"
+#     exclusions: "admin,break-glass"
+#   - realm: "partner-realm"
+#     exclusions: "admin"
