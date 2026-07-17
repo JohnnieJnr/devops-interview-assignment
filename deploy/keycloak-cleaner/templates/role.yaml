@@ -1,0 +1,40 @@
+{{- if .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "keycloak-cleaner.fullname" . }}
+  namespace: {{ .Values.namespace | quote }}
+  labels:
+    {{- include "keycloak-cleaner.labels" . | nindent 4 }}
+rules:
+# Allow reading secrets (to access the client secret)
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get"]
+  resourceNames:
+    - {{ .Values.keycloak.clientSecretRef.name }}
+# Allow reading config maps (for multi-realm support if needed)
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list"]
+# Allow writing logs (if needed for debugging)
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "keycloak-cleaner.fullname" . }}
+  namespace: {{ .Values.namespace | quote }}
+  labels:
+    {{- include "keycloak-cleaner.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "keycloak-cleaner.fullname" . }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "keycloak-cleaner.serviceAccountName" . }}
+  namespace: {{ .Values.namespace | quote }}
+{{- end }}
