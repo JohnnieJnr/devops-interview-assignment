@@ -52,6 +52,14 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
+Resolve the namespace for chart resources.
+Uses the Helm release namespace so `helm install -n keycloak-cleaner` stays consistent.
+*/}}
+{{- define "keycloak-cleaner.namespace" -}}
+{{- .Release.Namespace -}}
+{{- end }}
+
+{{/*
 Create the name of the service account to use
 */}}
 {{- define "keycloak-cleaner.serviceAccountName" -}}

@@ -3,30 +3,22 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: {{ include "keycloak-cleaner.fullname" . }}
-  namespace: {{ .Values.namespace | quote }}
+  namespace: {{ include "keycloak-cleaner.namespace" . }}
   labels:
     {{- include "keycloak-cleaner.labels" . | nindent 4 }}
 rules:
-# Allow reading secrets (to access the client secret)
-- apiGroups: [""]
-  resources: ["secrets"]
-  verbs: ["get"]
-  resourceNames:
-    - {{ .Values.keycloak.clientSecretRef.name }}
-# Allow reading config maps (for multi-realm support if needed)
-- apiGroups: [""]
-  resources: ["configmaps"]
-  verbs: ["get", "list"]
-# Allow writing logs (if needed for debugging)
-- apiGroups: [""]
-  resources: ["pods/log"]
-  verbs: ["get"]
+  # Optional: only needed if mounting the client secret as a volume instead of env injection
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+    resourceNames:
+      - {{ .Values.keycloak.clientSecretRef.name }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: {{ include "keycloak-cleaner.fullname" . }}
-  namespace: {{ .Values.namespace | quote }}
+  namespace: {{ include "keycloak-cleaner.namespace" . }}
   labels:
     {{- include "keycloak-cleaner.labels" . | nindent 4 }}
 roleRef:
@@ -34,7 +26,7 @@ roleRef:
   kind: Role
   name: {{ include "keycloak-cleaner.fullname" . }}
 subjects:
-- kind: ServiceAccount
-  name: {{ include "keycloak-cleaner.serviceAccountName" . }}
-  namespace: {{ .Values.namespace | quote }}
+  - kind: ServiceAccount
+    name: {{ include "keycloak-cleaner.serviceAccountName" . }}
+    namespace: {{ include "keycloak-cleaner.namespace" . }}
 {{- end }}
