@@ -1,4 +1,4 @@
-.PHONY: help up down logs seed grant-roles clean kind-up kind-down reset \
+.PHONY: help up down logs seed grant-roles clean kind-up kind-down reset run \
 	helm-lint helm-template image-build helm-install helm-test helm-uninstall
 
 IMAGE_NAME ?= cleaner
@@ -14,6 +14,7 @@ help:
 	@echo "  make logs            Tail Keycloak logs"
 	@echo "  make seed            Re-seed lastLogin attributes + LOGIN events (relative to now)"
 	@echo "  make grant-roles     Grant realm-management roles to the service account"
+	@echo "  make run             Run the Python cleaner locally (no Kubernetes)"
 	@echo "  make reset           Full reset (down + delete volumes + up + grant-roles)"
 	@echo "  make kind-up         Create a local Kind cluster"
 	@echo "  make kind-down       Delete the Kind cluster"
@@ -46,6 +47,9 @@ logs:
 
 grant-roles:
 	./keycloak/grant-service-account-roles.sh
+
+run:
+	PYTHONPATH=src python3 -m cleaner.main
 
 reset:
 	docker compose down -v

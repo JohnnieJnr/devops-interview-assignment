@@ -1,11 +1,14 @@
 # deploy/ - Keycloak Cleaner Helm Chart
 
-This directory contains a Helm chart for deploying the Keycloak stale-user cleanup service on Kubernetes.
+This directory contains a Helm chart for **scheduling** the Keycloak stale-user cleanup on Kubernetes.
+
+The chart is **independent of the Python application logic**. Cleanup behavior lives in `src/cleaner/` and runs standalone via `make run` (no cluster required). The chart only wraps that script: it builds a CronJob that invokes `python -m cleaner.main` with the same environment variables you would set locally. In production, you would typically build the Docker image from the repo and install this chart to run it on a schedule.
 
 ## Quick Start
 
 ### Prerequisites
 
+- The Python cleaner tested standalone (see repo root: `make up grant-roles && make run`)
 - Kubernetes cluster 1.24+ (1.27+ for CronJob `timeZone` support)
 - Helm 3.x
 - A Keycloak instance accessible from the cluster
