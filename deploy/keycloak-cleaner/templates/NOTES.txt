@@ -1,0 +1,25 @@
+Keycloak Cleaner has been deployed.
+
+Release:   {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+Realm:     {{ .Values.keycloak.realm }}
+Schedule:  {{ .Values.cronjob.schedule }} ({{ .Values.cronjob.timeZone }})
+Dry run:   {{ .Values.cleanup.dryRun }}
+
+Before the first scheduled run, confirm the client secret exists:
+
+  kubectl get secret {{ .Values.keycloak.clientSecretRef.name }} -n {{ .Release.Namespace }}
+
+Trigger a manual run:
+
+  kubectl create job --from=cronjob/{{ include "keycloak-cleaner.fullname" . }} \
+    {{ .Release.Name }}-manual-$(date +%s) -n {{ .Release.Namespace }}
+
+Watch logs:
+
+  kubectl logs -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }} --tail=100 -f
+
+Disable dry-run after verifying output:
+
+  helm upgrade {{ .Release.Name }} {{ .Chart.Name }} -n {{ .Release.Namespace }} \
+    --set cleanup.dryRun=false

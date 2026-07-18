@@ -1,5 +1,3 @@
-Here's a simpler, more concise version that still covers the six required points.
-
 # Keycloak Stale-User Cleanup
 
 ## Purpose
@@ -10,54 +8,56 @@ This project cleans up users in the seeded `acme` realm who have been inactive f
 
 I implemented a Python cleanup application that runs as a Kubernetes **CronJob**. It authenticates with Keycloak using the Client Credentials grant, reads the seeded `lastLogin` attribute, and deletes users older than the configured threshold.
 
-I chose this approach because it is simple, lightweight, and uses Keycloak's supported Admin REST API. I did not implement a Keycloak SPI or Kubernetes operator because they add unnecessary complexity for this exercise.
+I chose this approach because it is simple, lightweight, and uses Keycloak's supported Admin REST API. I rejected a Keycloak SPI and a Kubernetes operator because they add unnecessary complexity for this exercise.
 
 ## 2. Kubernetes Deployment
 
-The application is deployed using a Helm chart located in `deploy/keycloak-cleaner/`.
+The application is deployed using a Helm chart in `deploy/keycloak-cleaner/`.
 
 The chart creates:
 
-* CronJob
-* ServiceAccount
-* Secret (optional — disabled by default; create the Secret manually or via ExternalSecrets)
+- CronJob (scheduled cleanup)
+- ServiceAccount
+- Secret (optional — disabled by default; create manually or via ExternalSecrets)
 
-Deploy:
+**Local test (Kind + docker-compose Keycloak):**
+
+```bash
+make helm-test
+```
+
+**Manual install:**
 
 ```bash
 kubectl create namespace keycloak-cleaner
 kubectl create secret generic keycloak-cleaner-secret \
-  --from-literal=client-secret=YOUR_SECRET -n keycloak-cleaner
-helm install keycloak-cleanup ./deploy/keycloak-cleaner -n keycloak-cleaner
+  --from-literal=client-secret=cleanup-secret-change-me -n keycloak-cleaner
+helm install keycloak-cleaner ./deploy/keycloak-cleaner -n keycloak-cleaner
 ```
 
-Upgrade:
-
-```bash
-helm upgrade keycloak-cleanup ./deploy/keycloak-cleaner
-```
+For Kind against host Keycloak, use `values-kind.yaml` (see `deploy/README.md`).
 
 ## 3. Configuration and Safety
 
-Configuration is managed through `values.yaml`.
+Per-realm configuration lives in Helm `values.yaml` (or `--set` overrides). One Helm release per realm is the intended model.
 
-The cleaner supports:
+Safety rails:
 
-* configurable retention period (default 120 days)
-* dry-run mode
-* excluded users
-* audit logging through container logs
+- **Retention threshold** — `cleanup.inactivityDays` (default 120)
+- **Dry-run** — `cleanup.dryRun: true` by default; logs candidates without deleting
+- **Exclusions** — `cleanup.exclusions` (default `admin`, `break-glass`); service accounts are always skipped
+- **Audit** — structured JSON logs per candidate, skip, delete, and summary event
 
-The Keycloak client secret is stored in a Kubernetes Secret created before install (or optionally managed by the chart with `secret.create: true`).
+The Keycloak client secret is stored in a Kubernetes Secret referenced by `keycloak.clientSecretRef`, not embedded in the chart.
 
 ## 4. Multi-Realm Extension
 
-The cleanup logic is independent of the realm. Supporting multiple realms would only require adding multiple realm configurations and processing each one in turn.
+The cleanup logic is realm-agnostic. To support many realms, deploy one Helm release per realm with different `keycloak.realm`, `keycloak.clientId`, and secret references. A future single-CronJob design could iterate over a ConfigMap list of realm configs — the application would need a small loop over multiple env blocks or a JSON config file.
 
 ## 5. Production Improvement
 
-The exercise uses a seeded `lastLogin` user attribute. In production, I would determine inactivity using Keycloak LOGIN events or another authoritative source instead of a custom user attribute.
+The exercise uses a seeded `lastLogin` user attribute. In production, I would derive inactivity from Keycloak LOGIN events or a login-flow authenticator, with explicit retention and reconciliation policy, rather than a custom attribute.
 
 ## 6. AI Usage
 
-AI was used to generate most of the implementation, including the Python code, Helm chart, and documentation. I reviewed the generated code, verified that it met the  requirements, and made corrections where necessary.
+AI generated the initial Python client, CronJob Helm chart, and README drafts. I reviewed OAuth2 client-credentials flow against the seeded realm, verified exclusion and dry-run behavior against the nine test users, ran `make helm-test` end-to-end on Kind, and corrected chart defaults (secret name, local Keycloak URL for Kind, CronJob naming in docs). I kept the stdlib-only HTTP client instead of adding dependencies.
