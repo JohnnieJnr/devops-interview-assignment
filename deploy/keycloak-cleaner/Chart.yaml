@@ -9,9 +9,3 @@ keywords:
   - cleanup
   - cronjob
   - iam
-home: https://github.com/your-org/keycloak-cleaner
-sources:
-  - https://github.com/your-org/keycloak-cleaner
-maintainers:
-  - name: DevOps Team
-    email: devops@example.com

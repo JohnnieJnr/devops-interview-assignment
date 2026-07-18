@@ -20,13 +20,15 @@ The chart creates:
 
 * CronJob
 * ServiceAccount
-* Role
-* Secret
+* Secret (optional — disabled by default; create the Secret manually or via ExternalSecrets)
 
 Deploy:
 
 ```bash
-helm install keycloak-cleanup ./deploy/keycloak-cleaner
+kubectl create namespace keycloak-cleaner
+kubectl create secret generic keycloak-cleaner-secret \
+  --from-literal=client-secret=YOUR_SECRET -n keycloak-cleaner
+helm install keycloak-cleanup ./deploy/keycloak-cleaner -n keycloak-cleaner
 ```
 
 Upgrade:
@@ -46,7 +48,7 @@ The cleaner supports:
 * excluded users
 * audit logging through container logs
 
-The Keycloak client secret is stored as a Kubernetes Secret.
+The Keycloak client secret is stored in a Kubernetes Secret created before install (or optionally managed by the chart with `secret.create: true`).
 
 ## 4. Multi-Realm Extension
 

@@ -1,9 +1,8 @@
-{{- if .Values.cronjob }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: {{ include "keycloak-cleaner.fullname" . }}
-  namespace: {{ .Values.namespace | quote }}
+  namespace: {{ include "keycloak-cleaner.namespace" . }}
   labels:
     {{- include "keycloak-cleaner.labels" . | nindent 4 }}
   {{- with .Values.annotations }}
@@ -12,10 +11,8 @@ metadata:
   {{- end }}
 spec:
   schedule: {{ .Values.cronjob.schedule | quote }}
-  {{- if .Capabilities.APIVersions.Has "batch/v1" }}
-    {{- if .Values.cronjob.timeZone }}
+  {{- if .Values.cronjob.timeZone }}
   timeZone: {{ .Values.cronjob.timeZone | quote }}
-    {{- end }}
   {{- end }}
   concurrencyPolicy: {{ .Values.cronjob.concurrencyPolicy }}
   successfulJobsHistoryLimit: {{ .Values.cronjob.successfulJobsHistoryLimit }}
@@ -37,61 +34,39 @@ spec:
         spec:
           restartPolicy: {{ .Values.job.restartPolicy }}
           serviceAccountName: {{ include "keycloak-cleaner.serviceAccountName" . }}
-          {{- if .Values.pod.imagePullSecrets }}
+          {{- with .Values.imagePullSecrets }}
           imagePullSecrets:
-            {{- toYaml .Values.pod.imagePullSecrets | nindent 12 }}
+            {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.podSecurityContext }}
           securityContext:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-          {{- with .Values.pod.affinity }}
-          affinity:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-          {{- with .Values.pod.tolerations }}
-          tolerations:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-          {{- if .Values.pod.priorityClassName }}
-          priorityClassName: {{ .Values.pod.priorityClassName }}
-          {{- end }}
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
           containers:
-          - name: cleaner
-            image: "{{ .Values.pod.image.repository }}:{{ .Values.pod.image.tag }}"
-            imagePullPolicy: {{ .Values.pod.image.pullPolicy }}
-            command:
-              - python
-              - -m
-              - cleaner.main
-            env:
-              - name: KEYCLOAK_URL
-                value: {{ .Values.keycloak.url | quote }}
-              - name: KEYCLOAK_REALM
-                value: {{ .Values.keycloak.realm | quote }}
-              - name: KEYCLOAK_CLIENT_ID
-                value: {{ .Values.keycloak.clientId | quote }}
-              - name: KEYCLOAK_CLIENT_SECRET
-                valueFrom:
-                  secretKeyRef:
-                    name: {{ .Values.keycloak.clientSecretRef.name }}
-                    key: {{ .Values.keycloak.clientSecretRef.key }}
-              - name: INACTIVITY_DAYS
-                value: {{ .Values.cleanup.inactivityDays | quote }}
-              - name: DRY_RUN
-                value: {{ .Values.cleanup.dryRun | quote }}
-              - name: EXCLUSIONS
-                value: {{ .Values.cleanup.exclusions | quote }}
-            {{- with .Values.pod.resources }}
-            resources:
-              {{- toYaml . | nindent 14 }}
-            {{- end }}
-            {{- with .Values.securityContext }}
-            securityContext:
-              {{- toYaml . | nindent 14 }}
-            {{- end }}
-            {{- with .Values.pod.lifecycle }}
-            lifecycle:
-              {{- toYaml . | nindent 14 }}
-            {{- end }}
-{{- end }}
+            - name: cleaner
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command:
+                - python
+                - -m
+                - cleaner.main
+              env:
+                - name: KEYCLOAK_URL
+                  value: {{ .Values.keycloak.url | quote }}
+                - name: KEYCLOAK_REALM
+                  value: {{ .Values.keycloak.realm | quote }}
+                - name: KEYCLOAK_CLIENT_ID
+                  value: {{ .Values.keycloak.clientId | quote }}
+                - name: KEYCLOAK_CLIENT_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.keycloak.clientSecretRef.name }}
+                      key: {{ .Values.keycloak.clientSecretRef.key }}
+                - name: INACTIVITY_DAYS
+                  value: {{ .Values.cleanup.inactivityDays | quote }}
+                - name: DRY_RUN
+                  value: {{ .Values.cleanup.dryRun | quote }}
+                - name: EXCLUSIONS
+                  value: {{ join "," .Values.cleanup.exclusions | quote }}
+              resources:
+                {{- toYaml .Values.resources | nindent 16 }}
+              securityContext:
+                {{- toYaml .Values.securityContext | nindent 16 }}
