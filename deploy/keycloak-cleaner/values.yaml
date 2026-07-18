@@ -1,10 +1,10 @@
 # Keycloak configuration
 keycloak:
-  url: "http://host.docker.internal:8080"
+  url: "http://keycloak.default.svc.cluster.local:8080"
   realm: "acme"
   clientId: "user-cleanup-service"
   clientSecretRef:
-    name: "cleanup-secret-change-me"
+    name: "keycloak-cleaner-secret"
     key: "client-secret"
     # Only used when secret.create is true; prefer a pre-created Secret in production
     value: ""
@@ -78,9 +78,7 @@ securityContext:
     drop:
       - ALL
 
-# Common labels and optional CronJob annotations
-labels:
-  app.kubernetes.io/name: keycloak-cleaner
-  app.kubernetes.io/version: "0.1.0"
+# Optional extra labels merged into all resources
+labels: {}
 
 annotations: {}

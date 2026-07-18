@@ -11,7 +11,34 @@ This directory contains a Helm chart for deploying the Keycloak stale-user clean
 - A Keycloak instance accessible from the cluster
 - A Keycloak client with appropriate realm-management roles
 
-### Installation
+### Local end-to-end test (Kind + docker-compose Keycloak)
+
+From the repo root, with Docker running:
+
+```bash
+make helm-test
+```
+
+This will:
+
+1. Start Keycloak via `docker compose` and grant service-account roles
+2. Create a Kind cluster and load the `cleaner:0.1.0` image
+3. Install the chart with `values-kind.yaml` (Keycloak at `host.docker.internal:8080`)
+4. Trigger a one-off Job from the CronJob and print its logs
+
+Expected dry-run output: 4 stale candidates (`alice`, `bob`, `carol`, `dave`), `break-glass` skipped, 0 deletions.
+
+Individual steps:
+
+```bash
+make up grant-roles      # Keycloak on localhost:8080
+make kind-up               # optional if cluster already exists
+make image-build           # docker build -t cleaner:0.1.0 .
+make helm-install          # kind load + helm upgrade --install
+make helm-uninstall        # remove release
+```
+
+### Installation (production-shaped)
 
 ```bash
 # 1. Create a namespace (recommended)
@@ -33,13 +60,15 @@ Resources are deployed into the Helm release namespace (`-n keycloak-cleaner`), 
 ```
 keycloak-cleaner/
 ├── Chart.yaml
-├── values.yaml
+├── values.yaml              # Default values (in-cluster Keycloak URL)
+├── values-kind.yaml         # Local Kind testing against docker-compose Keycloak
 └── templates/
     ├── _helpers.tpl
     ├── cronjob.yaml
     ├── secret.yaml          # Rendered only when secret.create is true
     ├── serviceaccount.yaml
-    └── role.yaml            # Rendered only when rbac.create is true
+    ├── role.yaml            # Rendered only when rbac.create is true
+    └── NOTES.txt
 ```
 
 ## Key Design Decisions
@@ -226,9 +255,11 @@ kubectl logs -n keycloak-cleaner -l app.kubernetes.io/name=keycloak-cleaner --ta
 
 ### Manual Test Run
 
+When the release name matches the chart name (`keycloak-cleaner`), the CronJob resource is also named `keycloak-cleaner`:
+
 ```bash
-kubectl create job --from=cronjob/cleaner-keycloak-cleaner \
-  keycloak-cleaner-manual \
+kubectl create job --from=cronjob/keycloak-cleaner \
+  keycloak-cleaner-manual-$(date +%s) \
   -n keycloak-cleaner
 ```
 

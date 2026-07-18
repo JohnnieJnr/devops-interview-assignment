@@ -1,0 +1,11 @@
+# Override values for testing against docker-compose Keycloak on the host
+# via a local Kind cluster (see Makefile: make helm-test).
+keycloak:
+  url: "http://host.docker.internal:8080"
+  clientSecretRef:
+    name: "keycloak-cleaner-secret"
+    key: "client-secret"
+    value: "cleanup-secret-change-me"
+
+secret:
+  create: true
