@@ -1,6 +1,6 @@
 apiVersion: v2
 name: keycloak-cleaner
-description: A Helm chart for deploying the Keycloak stale-user cleanup service
+description: Helm chart to schedule the standalone Keycloak cleaner Python app as a CronJob
 type: application
 version: 1.0.0
 appVersion: "0.1.0"
