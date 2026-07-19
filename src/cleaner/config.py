@@ -21,6 +21,7 @@ class Config:
     inactivity_days: int
     dry_run: bool
     exclusions: list[str]
+    audit_log_file: str
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -38,6 +39,7 @@ class Config:
             ),
             dry_run=_bool(values.get("DRY_RUN", "true"), "DRY_RUN"),
             exclusions=_csv(values.get("EXCLUSIONS", "admin,break-glass")),
+            audit_log_file=values.get("AUDIT_LOG_FILE", "logs/audit.jsonl").strip(),
         )
 
 

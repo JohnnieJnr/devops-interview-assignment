@@ -16,8 +16,10 @@ from __future__ import annotations
 import json
 import sys
 import time
+from datetime import datetime, timezone
 from typing import Any
 
+from cleaner.audit import audit, close_audit_log, init_audit_log
 from cleaner.config import Config
 from cleaner.keycloak_client import KeycloakClient, KeycloakError
 
@@ -26,42 +28,97 @@ MILLIS_PER_DAY = 24 * 60 * 60 * 1000
 
 
 def main() -> int:
+    config: Config | None = None
     try:
         config = Config.from_env()
+        audit_log_file = init_audit_log(config.audit_log_file)
         client = KeycloakClient(
             config.keycloak_url,
             config.realm,
             config.client_id,
             config.client_secret,
         )
+        audit(
+            "run_started",
+            {
+                "audit_log_file": str(audit_log_file),
+                "dry_run": config.dry_run,
+                "inactivity_days": config.inactivity_days,
+            },
+            realm=config.realm,
+        )
         users = client.list_users()
-        stale_users = find_stale_users(users, config, now_ms=int(time.time() * 1000))
+        stale_users = find_stale_users(
+            users,
+            config,
+            now_ms=int(time.time() * 1000),
+            realm=config.realm,
+        )
 
+        deleted_users: list[dict[str, Any]] = []
         for candidate in stale_users:
-            audit("candidate", candidate)
-            if not config.dry_run:
-                client.delete_user(candidate["id"])
-                audit("deleted", candidate)
+            audit("candidate", user_audit_record(candidate), realm=config.realm)
+            if config.dry_run:
+                audit(
+                    "would_delete",
+                    user_audit_record(candidate, action="dry_run"),
+                    realm=config.realm,
+                )
+                continue
 
-        summary = {
-            "realm": config.realm,
+            try:
+                client.delete_user(candidate["id"])
+            except KeycloakError as exc:
+                audit(
+                    "delete_failed",
+                    {**user_audit_record(candidate), "error": str(exc)},
+                    realm=config.realm,
+                )
+                raise
+
+            deleted_users.append(candidate)
+            audit(
+                "deleted",
+                user_audit_record(
+                    candidate,
+                    action="user_deleted",
+                    deleted_by=config.client_id,
+                ),
+                realm=config.realm,
+            )
+
+        summary: dict[str, Any] = {
             "dry_run": config.dry_run,
             "inactivity_days": config.inactivity_days,
             "users_seen": len(users),
             "stale_candidates": len(stale_users),
-            "deleted": 0 if config.dry_run else len(stale_users),
+            "deleted": len(deleted_users),
         }
-        print(json.dumps({"event": "summary", **summary}, sort_keys=True))
+        if config.dry_run:
+            summary["would_delete_users"] = [
+                user_audit_record(user) for user in stale_users
+            ]
+        else:
+            summary["deleted_users"] = [
+                user_audit_record(user, deleted_by=config.client_id)
+                for user in deleted_users
+            ]
+
+        audit("summary", summary, realm=config.realm)
         return 0
     except (KeycloakError, ValueError) as exc:
         print(f"cleanup failed: {exc}", file=sys.stderr)
         return 1
+    finally:
+        close_audit_log()
 
 
 def find_stale_users(
     users: list[dict[str, Any]],
     config: Config,
     now_ms: int,
+    *,
+    realm: str,
 ) -> list[dict[str, Any]]:
     cutoff_ms = now_ms - (config.inactivity_days * MILLIS_PER_DAY)
     excluded = {username.lower() for username in config.exclusions}
@@ -72,7 +129,11 @@ def find_stale_users(
         user_id = str(user.get("id", ""))
 
         if is_excluded(username, excluded):
-            audit("skipped", {"id": user_id, "username": username, "reason": "excluded"})
+            audit(
+                "skipped",
+                {"id": user_id, "username": username, "reason": "excluded"},
+                realm=realm,
+            )
             continue
 
         last_login_ms = extract_last_login_ms(user)
@@ -84,6 +145,7 @@ def find_stale_users(
                     "username": username,
                     "reason": "missing_or_invalid_lastLogin",
                 },
+                realm=realm,
             )
             continue
 
@@ -124,8 +186,21 @@ def extract_last_login_ms(user: dict[str, Any]) -> int | None:
     return parsed if parsed > 0 else None
 
 
-def audit(event: str, payload: dict[str, Any]) -> None:
-    print(json.dumps({"event": event, **payload}, sort_keys=True))
+def ms_to_iso(timestamp_ms: int) -> str:
+    return datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc).isoformat()
+
+
+def user_audit_record(user: dict[str, Any], **extra: Any) -> dict[str, Any]:
+    last_login_ms = int(user["lastLogin"])
+    record = {
+        "id": user["id"],
+        "username": user["username"],
+        "inactiveDays": user["inactiveDays"],
+        "lastLogin": last_login_ms,
+        "lastLoginAt": ms_to_iso(last_login_ms),
+    }
+    record.update(extra)
+    return record
 
 
 if __name__ == "__main__":
