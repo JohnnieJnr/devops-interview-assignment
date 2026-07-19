@@ -66,6 +66,8 @@ spec:
                   value: {{ .Values.cleanup.dryRun | quote }}
                 - name: EXCLUSIONS
                   value: {{ join "," .Values.cleanup.exclusions | quote }}
+                - name: AUDIT_LOG_FILE
+                  value: {{ .Values.cleanup.auditLogFile | quote }}
               resources:
                 {{- toYaml .Values.resources | nindent 16 }}
               securityContext:

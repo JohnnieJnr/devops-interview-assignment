@@ -18,6 +18,7 @@ secret:
 cleanup:
   inactivityDays: 120
   dryRun: true
+  auditLogFile: "/tmp/audit.jsonl"
   exclusions:
     - admin
     - break-glass
